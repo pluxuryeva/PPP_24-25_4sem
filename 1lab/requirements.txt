@@ -1,0 +1,12 @@
+# Для этого проекта не требуются внешние зависимости
+# Используются только стандартные библиотеки Python:
+# - os
+# - socket
+# - threading
+# - subprocess
+# - json
+# - time
+# - logging
+# - signal
+# - sys
+# - datetime 
