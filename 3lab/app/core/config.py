@@ -6,9 +6,8 @@ class Settings(BaseSettings):
     # Database settings
     database_url: str = "sqlite:///./bruteforce.db"
     
-    # Celery settings
-    celery_broker_url: str = "redislite://bruteforce.rdb"
-    celery_result_backend: str = "redislite://bruteforce.rdb"
+    # Используем встроенную асинхронную обработку вместо Celery
+    use_async_tasks: bool = True
     
     # Security
     secret_key: str = "your-secret-key-here"

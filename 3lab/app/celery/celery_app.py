@@ -1,6 +1,15 @@
 from celery import Celery
 from app.core.config import settings
 
+# Настройка для использования fakeredis
+if settings.use_fakeredis:
+    import fakeredis
+    
+    # Monkey patch redis для Celery
+    import redis
+    redis.Redis = fakeredis.FakeRedis
+    redis.StrictRedis = fakeredis.FakeStrictRedis
+
 celery_app = Celery(
     "bruteforce",
     broker=settings.celery_broker_url,

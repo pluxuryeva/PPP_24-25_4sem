@@ -6,7 +6,7 @@ from typing import List
 from app.db.database import get_db
 from app.schemas.bruteforce import BruteforceRequest, BruteforceResponse, TaskStatus
 from app.cruds import bruteforce as bruteforce_crud
-from app.celery.tasks import bruteforce_task
+from app.services.task_manager import task_manager
 from app.core.config import settings
 
 router = APIRouter()
@@ -20,8 +20,8 @@ async def start_bruteforce(
 ):
     """Запуск новой задачи брутфорса"""
     
-    # Генерируем уникальный ID задачи
-    task_id = str(uuid.uuid4())
+    # Используем переданный task_id или генерируем новый
+    task_id = getattr(request, 'task_id', None) or str(uuid.uuid4())
     
     # Используем дефолтный charset если не указан
     charset = request.charset or settings.default_charset
@@ -29,16 +29,14 @@ async def start_bruteforce(
     # Ограничиваем максимальную длину
     max_length = min(request.max_length, settings.max_password_length)
     
-    # Создаем запись в базе данных
-    db_task = bruteforce_crud.create_task(db, task_id, request, user_id)
-    
-    # Запускаем Celery задачу
-    bruteforce_task.delay(
+    # Запускаем асинхронную задачу
+    await task_manager.start_bruteforce_task(
         task_id=task_id,
         hash_type=request.hash_type,
         target_hash=request.target_hash,
         charset=charset,
-        max_length=max_length
+        max_length=max_length,
+        user_id=user_id
     )
     
     return BruteforceResponse(
@@ -92,6 +90,26 @@ async def get_task_status(task_id: str, db: Session = Depends(get_db)):
         created_at=task.created_at,
         completed_at=task.completed_at
     )
+
+
+@router.delete("/task/{task_id}")
+async def cancel_task(task_id: str, db: Session = Depends(get_db)):
+    """Отмена активной задачи"""
+    success = task_manager.cancel_task(task_id)
+    if success:
+        return {"message": f"Задача {task_id} отменена"}
+    else:
+        raise HTTPException(status_code=404, detail="Активная задача не найдена")
+
+
+@router.get("/active-tasks")
+async def get_active_tasks():
+    """Получение списка активных задач"""
+    active_tasks = task_manager.get_active_tasks()
+    return {
+        "active_tasks": list(active_tasks.keys()),
+        "count": len(active_tasks)
+    }
 
 
 @router.get("/demo-hash/{password}")

@@ -8,6 +8,7 @@ class BruteforceRequest(BaseModel):
     target_hash: str
     charset: Optional[str] = None
     max_length: int = 6
+    task_id: Optional[str] = None  # Опциональный ID для WebSocket совместимости
 
 
 class BruteforceResponse(BaseModel):
